@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Test App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body[data-theme="dark"] {
+            --body-bg: #111827; 
+            --main-container-bg: #1f2937; 
+            --text-color: #f3f4f6;
+            --subtle-text-color: #9ca3af; 
+            --stat-bg: #374151; 
+            --primary-color: #6366f1; 
+            --shadow-color: rgba(99, 102, 241, 0.3); 
+            --button-hover: #4f46e5; 
+            --wpm-color: #4ade80; 
+            --acc-color: #fcd34d; 
+            --time-color: #f87171; 
+            --correct-color: #84cc16; 
+            --incorrect-bg: #ef4444; 
+            --incorrect-text: #1f2937; 
+            --error-glow: rgba(239, 68, 68, 0.6); 
+        }
+        body[data-theme="light"] {
+            --body-bg: #f3f4f6; /* Gray 100 */
+            --main-container-bg: #ffffff; /* White */
+            --text-color: #1f2937; /* Gray 800 */
+            --subtle-text-color: #6b7280; /* Gray 500 */
+            --stat-bg: #e5e7eb; /* Gray 200 */
+            --primary-color: #10b981; /* Emerald 500 */
+            --shadow-color: rgba(16, 185, 129, 0.3); /* Emerald shadow */
+            --button-hover: #059669; /* Emerald 600 */
+            --wpm-color: #059669; /* Emerald 600 */
+            --acc-color: #d97706; /* Amber 600 */
+            --time-color: #dc2626; /* Red 600 */
+            --correct-color: #16a34a; /* Green 600 */
+            --incorrect-bg: #fca5a5; /* Red 300 */
+            --incorrect-text: #b91c1c; /* Red 700 */
+            --error-glow: rgba(220, 38, 38, 0.3); /* Red glow for errors */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            background-color: var(--body-bg);
+            color: var(--text-color);
+        }
+
+        .main-container {
+            background-color: var(--main-container-bg);
+            box-shadow: 0 25px 50px -12px var(--shadow-color);
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smooth container movement/scaling */
+        }
+        #stats-container > div {
+            background-color: var(--stat-bg);
+            transition: background-color 0.3s ease;
+        }
+        #wpm-display { color: var(--wpm-color); }
+        #accuracy-display { color: var(--acc-color); }
+        #timer-display { color: var(--time-color); }
+        #test-text-container {
+            font-size: 1.5rem;
+            line-height: 1.6;
+            min-height: 120px;
+            background-color: var(--stat-bg);
+            color: var(--subtle-text-color);
+            transition: background-color 0.3s ease, box-shadow 0.2s ease;
+        }
+        #text-input {
+            background-color: var(--stat-bg);
+            color: var(--text-color);
+            border-color: var(--stat-bg);
+            transition: all 0.2s ease;
+        }
+        #text-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--primary-color);
+        }
+        .primary-button {
+            background-color: var(--primary-color);
+            box-shadow: 0 10px 15px -3px var(--shadow-color);
+            transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .primary-button:hover:not(:disabled) {
+            background-color: var(--button-hover);
+            transform: translateY(-2px);
+        }
+        .cursor {
+            border-right: 2px solid var(--primary-color);
+            animation: blink 1s step-start infinite;
+            padding-right: 2px;
+            margin-right: -2px;
+        }
+        @keyframes blink {
+            50% { border-color: transparent; }
+        }
+        .correct { color: var(--correct-color); }
+        .incorrect { 
+            background-color: var(--incorrect-bg); 
+            color: var(--incorrect-text); 
+            border-radius: 4px; 
+            padding: 0 1px; 
+            animation: shake 0.2s cubic-bezier(.36,.07,.19,.97) both;
+            transform: translate3d(0, 0, 0);
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
+        .untouched { color: var(--subtle-text-color); }
+        #theme-toggle:hover {
+             color: var(--primary-color);
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        .modal-enter {
+            animation: modal-fade-in 0.3s ease-out;
+        }
+        .modal-exit {
+            animation: modal-fade-out 0.3s ease-in forwards;
+        }
+        @keyframes modal-fade-in {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes modal-fade-out {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.95); }
+        }
+        .input-error {
+            box-shadow: 0 0 10px 1px var(--error-glow) !important;
+            border-color: var(--incorrect-bg) !important;
+        }
+
+    </style>
+</head>
+<body data-theme="dark" class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="main-container w-full max-w-4xl p-8 md:p-12 rounded-2xl shadow-2xl relative">
+        <div class="flex justify-center relative">
+            <h1 class="text-4xl font-extrabold text-center mb-2" style="color: var(--primary-color);">
+                Test Your Typing Speed...
+            </h1>
+            <button id="theme-toggle" class="absolute top-1 right-1 p-2 rounded-full transition duration-300" 
+                    style="border: 2px solid var(--stat-bg); color: var(--subtle-text-color);"
+                    title="Toggle Dark/Light Mode">
+            </button>
+        </div>
+
+        <p class="text-center mb-8" style="color: var(--subtle-text-color);">Measure your WPM and accuracy to sharpen your skills.</p>
+        <div id="stats-container" class="grid grid-cols-3 gap-4 mb-8 text-center">
+            <div class="p-4 rounded-lg shadow-inner">
+                <p class="text-sm font-medium uppercase tracking-wider" style="color: var(--subtle-text-color);">WPM</p>
+                <p id="wpm-display" class="text-3xl font-bold mt-1">0</p>
+            </div>
+            <div class="p-4 rounded-lg shadow-inner">
+                <p class="text-sm font-medium uppercase tracking-wider" style="color: var(--subtle-text-color);">Accuracy</p>
+                <p id="accuracy-display" class="text-3xl font-bold mt-1">100<span class="text-xl">%</span></p>
+            </div>
+            <div class="p-4 rounded-lg shadow-inner">
+                <p class="text-sm font-medium uppercase tracking-wider" style="color: var(--subtle-text-color);">Time (s)</p>
+                <p id="timer-display" class="text-3xl font-bold mt-1">60</p>
+            </div>
+        </div>
+        <div id="test-text-container" class="p-6 rounded-xl mb-6 shadow-custom overflow-hidden focus:outline-none" tabindex="0">
+            <span class="untouched">Click START to begin...</span>
+        </div>
+        <div class="space-y-4">
+            <div class="flex gap-4">
+                <select id="time-select" class="flex-1 p-4 rounded-xl text-lg border-2 hover:border-indigo-500 transition duration-200 cursor-pointer focus:ring-2 focus:ring-indigo-500" title="Select test duration" style="background-color: var(--stat-bg); color: var(--text-color); border-color: var(--stat-bg);">
+                    <option value="15">15 Seconds</option>
+                    <option value="30">30 Seconds</option>
+                    <option value="60" selected>60 Seconds (Default)</option>
+                    <option value="120">120 Seconds</option>
+                </select>
+                <select id="difficulty-select" class="flex-1 p-4 rounded-xl text-lg border-2 hover:border-indigo-500 transition duration-200 cursor-pointer focus:ring-2 focus:ring-indigo-500" title="Select text difficulty" style="background-color: var(--stat-bg); color: var(--text-color); border-color: var(--stat-bg);">
+                    <option value="easy" selected>Easy (Common Words)</option>
+                    <option value="medium">Medium (Standard Sentences)</option>
+                    <option value="hard">Hard (Complex Vocabulary)</option>
+                </select>
+            </div>
+            <div class="flex flex-col md:flex-row gap-4">
+                <input type="text" id="text-input" 
+                       class="flex-grow placeholder-gray-500 p-4 rounded-xl text-lg transition duration-200 border-2 disabled:opacity-50"
+                       placeholder="Start typing here..." 
+                       disabled
+                       autocomplete="off"
+                       spellcheck="false"
+                       style="background-color: var(--stat-bg); color: var(--text-color); border-color: var(--stat-bg);">
+                       
+                <button id="start-button" 
+                        class="primary-button text-white font-semibold py-4 px-8 rounded-xl transition duration-300 transform hover:scale-[1.02] disabled:bg-gray-500 disabled:shadow-none">
+                    START TEST
+                </button>
+            </div>
+        </div>
+        <div id="result-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
+            <div id="modal-content" class="p-8 rounded-xl max-w-md w-full text-center shadow-2xl modal-enter" style="background-color: var(--main-container-bg);">
+                <h3 class="text-3xl font-bold mb-4" style="color: var(--primary-color);">Test Complete!</h3>
+                <p id="modal-message" class="mb-6" style="color: var(--subtle-text-color);"></p>
+                <div class="space-y-3 mb-6">
+                    <p class="text-2xl font-semibold">WPM: <span id="final-wpm" style="color: var(--wpm-color);">0</span></p>
+                    <p class="text-2xl font-semibold">Accuracy: <span id="final-accuracy" style="color: var(--acc-color);">0%</span></p>
+                </div>
+                <button id="restart-modal-button" 
+                        class="primary-button text-white font-semibold py-3 px-6 rounded-lg">
+                    Try Again
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'typing-test-app';
+        const TEST_TEXTS = {
+            'easy': [
+                "The quick brown fox jumps over the lazy dog. A swift journey across simple phrases builds confidence.",
+                "When the bell rang, she knew it was time to go home. Simple words are easy to master and remember.",
+                "The moon shines bright on the water tonight. Always look for the simple way to start your coding projects.",
+                "Programming languages like Python and JavaScript are essential tools for anyone learning modern development techniques.",
+            ],
+            'medium': [
+                "Artificial intelligence is rapidly changing the technological landscape, offering new possibilities in data analysis, automation, and creative problem-solving.",
+                "A successful presentation requires meticulous preparation and a thorough understanding of the audience's professional expectations and engagement triggers.",
+                "Programming is a delightful exploration of logic and structure, transforming abstract ideas into functional realities and complex systems.",
+                "Modern applications prioritize responsiveness, ensuring optimal performance across a variety of screen sizes and input devices.",
+            ],
+            'hard': [
+                "Jactitation is an unusual word referring to a false boast or claim, often used in legal contexts like divorce proceedings to describe an untrue statement of marriage.",
+                "The decentralized architecture of blockchain technology provides unprecedented immutability and cryptographic security for transactional records worldwide.",
+                "Exquisite typographical arrangements harmonize content and design, prioritizing readability over mere aesthetic appeal in sophisticated documents and publications.",
+                "Epistemological inquiries concerning the nature and scope of knowledge often delve into philosophical debates about skepticism and rational justification."
+            ]
+        };
+        
+        let textToType = '';
+        let timer = null;
+        let startTime = 0;
+        let testIsActive = false;
+        let typedCharactersCount = 0;
+        let correctCharactersCount = 0;
+        let characterIndex = 0;
+        let totalDurationSeconds = 60; 
+        let timeRemaining = 60;
+        const body = document.body;
+        const mainContainer = document.querySelector('.main-container');
+        const textContainer = document.getElementById('test-text-container');
+        const textInput = document.getElementById('text-input');
+        const startButton = document.getElementById('start-button');
+        const wpmDisplay = document.getElementById('wpm-display');
+        const accuracyDisplay = document.getElementById('accuracy-display');
+        const timerDisplay = document.getElementById('timer-display');
+        const resultModal = document.getElementById('result-modal');
+        const modalContent = document.getElementById('modal-content');
+        const restartModalButton = document.getElementById('restart-modal-button');
+        const finalWPM = document.getElementById('final-wpm');
+        const finalAccuracy = document.getElementById('final-accuracy');
+        const modalMessage = document.getElementById('modal-message');
+        const timeSelect = document.getElementById('time-select');
+        const difficultySelect = document.getElementById('difficulty-select');
+        const themeToggle = document.getElementById('theme-toggle');
+        function initializeText() {
+            const selectedDifficulty = difficultySelect.value;
+            const texts = TEST_TEXTS[selectedDifficulty];
+            const randomIndex = Math.floor(Math.random() * texts.length);
+            
+            let baseText = texts[randomIndex];
+            const requiredChars = totalDurationSeconds * 6; 
+            while (baseText.length < requiredChars) {
+                baseText += ' ' + texts[(randomIndex + 1) % texts.length]; 
+            }
+            
+            textToType = baseText;
+            renderText();
+        }
+        function renderText() {
+            let html = '';
+            for (let i = 0; i < textToType.length; i++) {
+                const char = textToType[i];
+                let className = 'untouched';
+
+                if (i < characterIndex) {
+                    if (textInput.value[i] === char) {
+                        className = 'correct';
+                    } else {
+                        className = 'incorrect';
+                    }
+                }
+                if (i === characterIndex) {
+                    const charDisplay = (char === ' ') ? '&nbsp;' : char;
+                    html += `<span class="${className} cursor">${charDisplay}</span>`;
+                } else {
+                    const charDisplay = (char === ' ') ? '&nbsp;' : char;
+                    html += `<span class="${className}">${charDisplay}</span>`;
+                }
+            }
+            if (characterIndex === textToType.length) {
+                html += '<span class="cursor"></span>';
+            }
+
+            textContainer.innerHTML = html;
+        }
+        function updateStats() {
+            if (!testIsActive) return;
+
+            const timeElapsedInSeconds = Math.round((Date.now() - startTime) / 1000);
+            timeRemaining = totalDurationSeconds - timeElapsedInSeconds;
+
+            if (timeRemaining <= 0) {
+                timeRemaining = 0;
+                timerDisplay.textContent = 0;
+                endTest(false); 
+                return;
+            }
+            const timeInMinutes = timeElapsedInSeconds / 60;
+            
+            let wpm = timeInMinutes > 0 ? Math.round((correctCharactersCount / 5) / timeInMinutes) : 0;
+            let accuracy = typedCharactersCount > 0 ? Math.round((correctCharactersCount / typedCharactersCount) * 100) : 100;
+
+            wpmDisplay.textContent = wpm;
+            accuracyDisplay.innerHTML = `${accuracy}<span class="text-xl">%</span>`;
+            timerDisplay.textContent = timeRemaining;
+        }
+        function startTimer() {
+            if (testIsActive) return;
+            totalDurationSeconds = parseInt(timeSelect.value, 10);
+            timeRemaining = totalDurationSeconds;
+            timerDisplay.textContent = timeRemaining; 
+
+            startTime = Date.now();
+            testIsActive = true;
+            timer = setInterval(updateStats, 1000); 
+        }
+        function stopTimer() {
+            if (timer) {
+                clearInterval(timer);
+            }
+            testIsActive = false;
+        }
+        
+        let lastCharWasIncorrect = false; 
+        function handleInput(e) {
+            if (!testIsActive) {
+                mainContainer.style.transform = 'scale(1.01)';
+                setTimeout(() => {
+                    mainContainer.style.transform = 'scale(1)';
+                }, 300);
+                startTimer();
+            }
+
+            const currentInput = e.target.value;
+            let newCharacterIndex = currentInput.length;
+            if (newCharacterIndex > textToType.length) {
+                textInput.value = textInput.value.substring(0, textToType.length);
+                newCharacterIndex = textToType.length;
+            }
+
+            characterIndex = newCharacterIndex;
+            typedCharactersCount = characterIndex;
+            correctCharactersCount = 0;
+            
+            let isCurrentCharCorrect = true;
+            for (let i = 0; i < characterIndex; i++) {
+                if (i < textToType.length) {
+                    if (currentInput[i] === textToType[i]) {
+                        correctCharactersCount++;
+                    } else {
+                        isCurrentCharCorrect = false;
+                    }
+                }
+            }
+            if (!isCurrentCharCorrect && !lastCharWasIncorrect) {
+                textInput.classList.add('input-error');
+                setTimeout(() => {
+                    textInput.classList.remove('input-error');
+                }, 200);
+            }
+            lastCharWasIncorrect = !isCurrentCharCorrect;
+
+
+            renderText();
+            updateStats();
+            if (characterIndex === textToType.length) {
+                endTest(true);
+            }
+        }
+        function startTest() {
+            startButton.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                startButton.style.transform = '';
+            }, 300);
+
+            timeSelect.disabled = true;
+            difficultySelect.disabled = true;
+            themeToggle.disabled = true; 
+            
+            stopTimer();
+            textInput.value = '';
+            characterIndex = 0;
+            typedCharactersCount = 0;
+            correctCharactersCount = 0;
+            
+            wpmDisplay.textContent = '0';
+            accuracyDisplay.innerHTML = `100<span class="text-xl">%</span>`;
+            
+            textInput.disabled = false;
+            textInput.focus();
+            startButton.disabled = true;
+            startButton.textContent = 'TYPING...';
+
+            totalDurationSeconds = parseInt(timeSelect.value, 10);
+            timeRemaining = totalDurationSeconds;
+            timerDisplay.textContent = timeRemaining;
+
+            initializeText();
+        }
+        function endTest(wasCompleted) {
+            if (!testIsActive && !wasCompleted) return;
+            
+            stopTimer();
+            testIsActive = false;
+            textInput.disabled = true;
+            startButton.disabled = false;
+            startButton.textContent = 'RESTART TEST';
+            
+            mainContainer.style.filter = 'blur(2px)';
+
+            const actualTimeSpent = wasCompleted ? (Date.now() - startTime) / 1000 : totalDurationSeconds;
+            
+            const finalTimeInMinutes = actualTimeSpent / 60;
+            let finalWpm = finalTimeInMinutes > 0 ? Math.round((correctCharactersCount / 5) / finalTimeInMinutes) : 0;
+            let finalAccuracy = typedCharactersCount > 0 ? Math.round((correctCharactersCount / typedCharactersCount) * 100) : 100;
+
+            if (wasCompleted) {
+                modalMessage.textContent = `You finished the text in ${actualTimeSpent.toFixed(1)} seconds!`;
+            } else {
+                modalMessage.textContent = 'Time is up! See your performance below.';
+            }
+
+            finalWPM.textContent = finalWpm;
+            finalAccuracy.textContent = `${finalAccuracy}%`;
+            modalContent.classList.remove('modal-exit');
+            modalContent.classList.add('modal-enter');
+            resultModal.classList.remove('hidden');
+        }
+        function resetApp() {
+            stopTimer();
+            testIsActive = false;
+            textInput.value = '';
+            textInput.disabled = true;
+            startButton.disabled = false;
+            startButton.textContent = 'START TEST';
+            
+            mainContainer.style.filter = 'none';
+            
+            timeSelect.disabled = false;
+            difficultySelect.disabled = false;
+            themeToggle.disabled = false; 
+            
+            wpmDisplay.textContent = '0';
+            accuracyDisplay.innerHTML = `100<span class="text-xl">%</span>`;
+            
+            totalDurationSeconds = parseInt(timeSelect.value, 10);
+            timerDisplay.textContent = totalDurationSeconds;
+
+            textContainer.innerHTML = '<span class="untouched">Click START to begin...</span>';
+            characterIndex = 0;
+            typedCharactersCount = 0;
+            correctCharactersCount = 0;
+            lastCharWasIncorrect = false;
+        }
+
+        function changeTheme(isInitialLoad) {
+            let currentTheme = body.getAttribute('data-theme');
+            let newTheme = currentTheme;
+            
+            if (!isInitialLoad) {
+                newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                body.setAttribute('data-theme', newTheme);
+                if (!testIsActive) {
+                    resetApp();
+                }
+            } 
+
+            if (newTheme === 'dark') {
+                themeToggle.innerHTML = `
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" title="Switch to Light Theme">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                `; 
+            } else {
+                themeToggle.innerHTML = `
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" title="Switch to Dark Theme">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                `; 
+            }
+        }
+        function hideModal() {
+            modalContent.classList.remove('modal-enter');
+            modalContent.classList.add('modal-exit');
+            setTimeout(() => {
+                resultModal.classList.add('hidden');
+                modalContent.classList.remove('modal-exit');
+            }, 300);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            resetApp();
+            startButton.addEventListener('click', startTest);
+            textInput.addEventListener('input', handleInput);
+            timeSelect.addEventListener('change', resetApp);
+            difficultySelect.addEventListener('change', resetApp);
+            themeToggle.addEventListener('click', () => changeTheme(false)); 
+            textContainer.addEventListener('click', () => {
+                if (!textInput.disabled) {
+                    textInput.focus();
+                }
+            });
+            restartModalButton.addEventListener('click', () => {
+                hideModal();
+                resetApp(); 
+            });
+            changeTheme(true);
+        });
+        
+    </script>
+</body>
+</html>
